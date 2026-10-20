@@ -15,7 +15,7 @@ import android.widget.TextView
 
 class MainActivity : Activity() {
 
-    private val background = Color.rgb(8, 14, 30)
+    private val screenBgColor = Color.rgb(8, 14, 30)
     private val blue = Color.rgb(30, 110, 220)
     private val white = Color.WHITE
     private val grey = Color.LTGRAY
@@ -27,7 +27,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(28, 24, 28, 24)
-            setBackgroundColor(background)
+            setBackgroundColor(screenBgColor)
         }
 
         val scroll = ScrollView(this)
