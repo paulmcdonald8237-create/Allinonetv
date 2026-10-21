@@ -6,51 +6,83 @@ import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.text.InputType
 import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import org.json.JSONArray
+import org.json.JSONObject
 
 class MainActivity : Activity() {
 
-    private val screenBgColor = Color.rgb(8, 14, 30)
+    private val bg = Color.rgb(8, 14, 30)
     private val blue = Color.rgb(30, 110, 220)
+    private val prefs by lazy {
+        getSharedPreferences("allinonetv_profiles", MODE_PRIVATE)
+    }
+
+    private data class Provider(val name: String, val url: String)
+
+    private var providers = mutableListOf<Provider>()
+    private var selectedUrl = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        loadProviders()
         showHome()
     }
 
     private fun makeRoot(): LinearLayout {
-        return LinearLayout(this).apply {
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(28, 24, 28, 24)
-            setBackgroundColor(screenBgColor)
+            setPadding(24, 24, 24, 24)
+            setBackgroundColor(bg)
         }
+
+        return content
     }
 
-    private fun addTitle(root: LinearLayout, titleText: String) {
+    private fun setScreen(root: LinearLayout) {
+        val scroll = ScrollView(this)
+        scroll.isFillViewport = true
+        scroll.addView(root)
+        setContentView(scroll)
+    }
+
+    private fun title(root: LinearLayout, text: String) {
         root.addView(TextView(this).apply {
-            text = titleText
+            this.text = text
             textSize = 28f
             setTextColor(Color.WHITE)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 24)
+            setPadding(0, 0, 0, 20)
         })
     }
 
-    private fun addButton(
+    private fun label(root: LinearLayout, text: String) {
+        root.addView(TextView(this).apply {
+            this.text = text
+            textSize = 16f
+            setTextColor(Color.LTGRAY)
+            gravity = Gravity.CENTER
+            setPadding(0, 6, 0, 10)
+        })
+    }
+
+    private fun button(
         root: LinearLayout,
-        label: String,
+        text: String,
         action: () -> Unit
     ) {
         root.addView(Button(this).apply {
-            text = label
-            textSize = 17f
+            this.text = text
+            textSize = 16f
             isAllCaps = false
             setTextColor(Color.WHITE)
             background = GradientDrawable().apply {
@@ -59,141 +91,13 @@ class MainActivity : Activity() {
             }
             setOnClickListener { action() }
         }, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            58
+            LinearLayout.LayoutParams.MATCH_PARENT, 58
         ).apply {
-            setMargins(0, 6, 0, 6)
+            setMargins(0, 5, 0, 5)
         })
     }
 
-    private fun showHome() {
-        val root = makeRoot()
-        addTitle(root, "Allinonetv")
-
-        root.addView(TextView(this).apply {
-            text = "Your TV, all in one place"
-            textSize = 17f
-            setTextColor(Color.rgb(80, 190, 255))
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 18)
-        })
-
-        addButton(root, "Live TV") {
-            showMessage(
-                "Live TV",
-                "Your channels will appear here once streaming is connected."
-            )
-        }
-
-        addButton(root, "Movies") {
-            showMessage(
-                "Movies",
-                "Your movie catalogue will appear here once connected."
-            )
-        }
-
-        addButton(root, "Series") {
-            showMessage(
-                "Series",
-                "Your series catalogue will appear here once connected."
-            )
-        }
-
-        addButton(root, "TV Guide (EPG)") {
-            showMessage(
-                "TV Guide",
-                "Your TV programme guide will appear here once connected."
-            )
-        }
-
-        addButton(root, "Favourites") {
-            showMessage(
-                "Favourites",
-                "Your saved channels and programmes will appear here."
-            )
-        }
-
-        addButton(root, "Customer Login") {
-            showLogin()
-        }
-
-        setContentView(root)
-    }
-
-    private fun showLogin() {
-        val root = makeRoot()
-        addTitle(root, "Allinonetv Login")
-
-        root.addView(TextView(this).apply {
-            text = "Sign in to your account"
-            textSize = 17f
-            setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 18)
-        })
-
-        val username = makeInput("Username")
-        username.inputType = InputType.TYPE_CLASS_TEXT
-
-        val password = makeInput("Password")
-        password.inputType =
-            InputType.TYPE_CLASS_TEXT or
-            InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-        root.addView(username)
-        root.addView(password)
-
-        addButton(root, "Log In") {
-            val user = username.text.toString().trim()
-            val pass = password.text.toString()
-
-            if (user.isEmpty() || pass.isEmpty()) {
-                showMessage(
-                    "Missing Details",
-                    "Please enter your username and password."
-                )
-            } else {
-                showMessage(
-                    "Login Not Connected Yet",
-                    "The login screen is ready, but secure account verification still needs to be connected."
-                )
-            }
-        }
-
-        addButton(root, "Scan QR Code") {
-            showMessage(
-                "QR Code Login",
-                "QR scanning will be added after the account connection is set up."
-            )
-        }
-
-        addButton(root, "Back to Home") {
-            showHome()
-        }
-
-        setContentView(root)
-    }
-
-    private fun showMessage(title: String, message: String) {
-        val root = makeRoot()
-        addTitle(root, title)
-
-        root.addView(TextView(this).apply {
-            text = message
-            textSize = 17f
-            setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 24)
-        })
-
-        addButton(root, "Back to Home") {
-            showHome()
-        }
-
-        setContentView(root)
-    }
-
-    private fun makeInput(hintText: String): EditText {
+    private fun input(hintText: String, password: Boolean = false): EditText {
         return EditText(this).apply {
             hint = hintText
             textSize = 16f
@@ -202,17 +106,191 @@ class MainActivity : Activity() {
             setSingleLine(true)
             setPadding(14, 8, 14, 8)
 
+            inputType = if (password) {
+                InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_VARIATION_PASSWORD
+            } else {
+                InputType.TYPE_CLASS_TEXT
+            }
+
             background = GradientDrawable().apply {
                 setColor(Color.rgb(24, 34, 54))
                 cornerRadius = 12f
             }
 
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                56
+                LinearLayout.LayoutParams.MATCH_PARENT, 56
             ).apply {
-                setMargins(0, 6, 0, 6)
+                setMargins(0, 5, 0, 5)
             }
         }
     }
+
+    private fun showHome() {
+        val root = makeRoot()
+        title(root, "Allinonetv")
+        label(root, "Your TV, all in one place")
+
+        button(root, "Live TV") {
+            showMessage("Live TV", "Connect an authorised streaming provider to load channels.")
+        }
+        button(root, "Movies") {
+            showMessage("Movies", "Your movie catalogue will appear when streaming is connected.")
+        }
+        button(root, "Series") {
+            showMessage("Series", "Your series catalogue will appear when streaming is connected.")
+        }
+        button(root, "TV Guide (EPG)") {
+            showMessage("TV Guide", "Programme listings need an EPG connection.")
+        }
+        button(root, "Favourites") {
+            showMessage("Favourites", "Your saved channels will appear here when implemented.")
+        }
+        button(root, "Manage Providers") {
+            showProviders()
+        }
+        button(root, "Customer Login") {
+            showLogin()
+        }
+
+        setScreen(root)
+    }
+
+    private fun showProviders() {
+        val root = makeRoot()
+        title(root, "Manage Providers")
+        label(root, "Add an authorised HTTPS server")
+
+        val nameInput = input("Provider name")
+        val urlInput = input("Server URL (https://...)")
+        root.addView(nameInput)
+        root.addView(urlInput)
+
+        button(root, "Add Provider") {
+            val name = nameInput.text.toString().trim()
+            val rawUrl = urlInput.text.toString().trim().trimEnd('/')
+
+            val uri = runCatching { Uri.parse(rawUrl) }.getOrNull()
+            val validUrl = uri != null &&
+                uri.scheme.equals("https", ignoreCase = true) &&
+                !uri.host.isNullOrBlank()
+
+            when {
+                name.isBlank() -> showMessage(
+                    "Provider Name Required", "Enter a name for this provider."
+                )
+                !validUrl -> showMessage(
+                    "Invalid Server URL",
+                    "Enter a valid HTTPS server address, including https://."
+                )
+                providers.any { it.url.equals(rawUrl, ignoreCase = true) } ->
+                    showMessage(
+                        "Already Added", "That server is already saved."
+                    )
+                else -> {
+                    providers.add(Provider(name, rawUrl))
+                    saveProviders()
+                    showProviders()
+                }
+            }
+        }
+
+        label(root, "Saved providers")
+
+        if (providers.isEmpty()) {
+            label(root, "No providers added yet.")
+        } else {
+            providers.forEach { provider ->
+                button(root, "${provider.name}  •  ${provider.url}") {
+                    selectedUrl = provider.url
+                    showLogin()
+                }
+            }
+        }
+
+        button(root, "Back to Home") { showHome() }
+        setScreen(root)
+    }
+
+    private fun showLogin() {
+        val root = makeRoot()
+        title(root, "Allinonetv Login")
+
+        if (selectedUrl.isBlank()) {
+            label(root, "Choose a provider to continue.")
+            button(root, "Choose Provider") { showProviders() }
+        } else {
+            label(root, "Selected server:\n$selectedUrl")
+        }
+
+        val username = input("Username")
+        val password = input("Password", password = true)
+        root.addView(username)
+        root.addView(password)
+
+        button(root, "Log In") {
+            if (selectedUrl.isBlank()) {
+                showMessage("Choose Provider", "Add and select a provider first.")
+            } else if (
+                username.text.toString().trim().isEmpty() ||
+                password.text.toString().isEmpty()
+            ) {
+                showMessage("Missing Details", "Enter your username and password.")
+            } else {
+                showMessage(
+                    "Connection Not Integrated",
+                    "The profile and login screens are ready. Secure provider authentication must be connected before these details can sign you in."
+                )
+            }
+        }
+
+        button(root, "Change Provider") { showProviders() }
+        button(root, "Scan QR Code") {
+            showMessage(
+                "QR Code Login",
+                "QR scanning still needs to be implemented."
+            )
+        }
+        button(root, "Back to Home") { showHome() }
+
+        setScreen(root)
+    }
+
+    private fun showMessage(messageTitle: String, message: String) {
+        val root = makeRoot()
+        title(root, messageTitle)
+        label(root, message)
+        button(root, "Back to Home") { showHome() }
+        button(root, "Manage Providers") { showProviders() }
+        setScreen(root)
+    }
+
+    private fun loadProviders() {
+        providers.clear()
+        val saved = prefs.getString("providers", "[]") ?: "[]"
+
+        runCatching {
+            val array = JSONArray(saved)
+            for (i in 0 until array.length()) {
+                val item = array.getJSONObject(i)
+                val name = item.optString("name")
+                val url = item.optString("url")
+                if (name.isNotBlank() && url.isNotBlank()) {
+                    providers.add(Provider(name, url))
+                }
+            }
+        }
+    }
+
+    private fun saveProviders() {
+        val array = JSONArray()
+        providers.forEach { provider ->
+            array.put(JSONObject().apply {
+                put("name", provider.name)
+                put("url", provider.url)
+            })
+        }
+        prefs.edit().putString("providers", array.toString()).apply()
+    }
 }
+
