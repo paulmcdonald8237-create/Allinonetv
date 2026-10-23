@@ -9,17 +9,22 @@ import android.widget.TextView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
 class PlayerActivity : Activity() {
     private var player: ExoPlayer? = null
+    private var statusView: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val streamUrl = intent.getStringExtra("stream_url")
-        val title = intent.getStringExtra("stream_title") ?: "Allinonetv Player"
-        if (streamUrl.isNullOrBlank() || !(streamUrl.startsWith("https://") || streamUrl.startsWith("http://"))) {
+        val streamTitle = intent.getStringExtra("stream_title") ?: "Allinonetv Player"
+
+        if (streamUrl.isNullOrBlank() ||
+            !(streamUrl.startsWith("https://", true) || streamUrl.startsWith("http://", true))) {
             showError("No valid stream was provided. Please return and try again.")
             return
         }
@@ -28,8 +33,9 @@ class PlayerActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.BLACK)
         }
+
         val heading = TextView(this).apply {
-            text = title
+            text = streamTitle
             textSize = 18f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
@@ -38,26 +44,66 @@ class PlayerActivity : Activity() {
         root.addView(heading, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 56
         ))
+
         val view = PlayerView(this).apply {
             useController = true
             keepScreenOn = true
+            setShutterBackgroundColor(Color.BLACK)
         }
         root.addView(view, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
         ))
+
+        statusView = TextView(this).apply {
+            text = "Connecting to channel…"
+            textSize = 14f
+            setTextColor(Color.LTGRAY)
+            gravity = Gravity.CENTER
+            setPadding(12, 8, 12, 8)
+        }
+        root.addView(statusView, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 44
+        ))
+
         setContentView(root)
 
-        player = ExoPlayer.Builder(this).build().also { exo ->
-            view.player = exo
-            exo.setMediaItem(MediaItem.fromUri(streamUrl))
-            exo.addListener(object : Player.Listener {
-                override fun onPlayerError(error: PlaybackException) {
-                    showError("Playback failed. The provider may not support this stream format, or the stream may be unavailable.")
-                }
-            })
-            exo.prepare()
-            exo.playWhenReady = true
-        }
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent("Allinonetv Android TV Player")
+            .setConnectTimeoutMs(15000)
+            .setReadTimeoutMs(30000)
+            .setAllowCrossProtocolRedirects(true)
+
+        player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(
+                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
+                    .setDataSourceFactory(httpFactory)
+            )
+            .build()
+            .also { exo ->
+                view.player = exo
+                exo.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        statusView?.text = when (playbackState) {
+                            Player.STATE_IDLE -> "Player ready"
+                            Player.STATE_BUFFERING -> "Connecting / buffering…"
+                            Player.STATE_READY -> if (exo.playWhenReady) "Playing" else "Ready to play"
+                            Player.STATE_ENDED -> "Stream ended"
+                            else -> "Connecting to channel…"
+                        }
+                    }
+
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        if (isPlaying) statusView?.text = "Playing"
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        statusView?.text = "Playback error: ${error.errorCodeName}"
+                    }
+                })
+                exo.setMediaItem(MediaItem.fromUri(streamUrl))
+                exo.prepare()
+                exo.playWhenReady = true
+            }
     }
 
     private fun showError(message: String) {
