@@ -517,7 +517,7 @@ class MainActivity : Activity() {
         } else {
             label(root, "${items.length()} items loaded. Select an item for details.")
 
-            val visibleCount = minOf(items.length(), 100)
+            val visibleCount = items.length()
             for (i in 0 until visibleCount) {
                 val item = items.optJSONObject(i) ?: continue
                 val name = item.optString("name", "Untitled")
@@ -548,9 +548,6 @@ class MainActivity : Activity() {
                 }
             }
 
-            if (items.length() > visibleCount) {
-                label(root, "Showing the first $visibleCount items. More catalogue browsing can be added next.")
-            }
         }
 
         button(root, "Back to Home") {
