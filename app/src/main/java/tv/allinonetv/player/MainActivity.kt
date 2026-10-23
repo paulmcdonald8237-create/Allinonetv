@@ -37,6 +37,9 @@ class MainActivity : Activity() {
     private val customerLoginUrl =
         "https://allinonetv-master-panel.vercel.app/api/customer-login"
 
+    private val customerCatalogueUrl =
+        "https://allinonetv-master-panel.vercel.app/api/customer-catalogue"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         loadProviders()
