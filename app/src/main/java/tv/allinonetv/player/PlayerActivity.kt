@@ -18,6 +18,7 @@ import androidx.media3.ui.PlayerView
 class PlayerActivity : Activity() {
     private var player: ExoPlayer? = null
     private var statusView: TextView? = null
+    private var audioTrackStatus = "Checking audio track…"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,7 +97,7 @@ class PlayerActivity : Activity() {
                         statusView?.text = when (playbackState) {
                             Player.STATE_IDLE -> "Player ready"
                             Player.STATE_BUFFERING -> "Connecting / buffering…"
-                            Player.STATE_READY -> if (exo.playWhenReady) "Playing" else "Ready to play"
+                            Player.STATE_READY -> if (exo.playWhenReady) "Playing — $audioTrackStatus" else "Ready to play — $audioTrackStatus"
                             Player.STATE_ENDED -> "Stream ended"
                             else -> "Connecting to channel…"
                         }
@@ -113,11 +114,16 @@ class PlayerActivity : Activity() {
                         val audioGroups = tracks.groups.filter {
                             it.type == C.TRACK_TYPE_AUDIO
                         }
-                        statusView?.text = when {
-                            audioGroups.isEmpty() -> "No audio track detected"
+                        audioTrackStatus = when {
+                            audioGroups.isEmpty() -> "no audio track detected"
                             audioGroups.any { it.isSupported } ->
-                                "Audio track detected — supported by player"
-                            else -> "Audio track detected, but format is unsupported"
+                                "audio track supported"
+                            else -> "audio format unsupported"
+                        }
+                        statusView?.text = if (exo.playbackState == Player.STATE_READY && exo.playWhenReady) {
+                            "Playing — $audioTrackStatus"
+                        } else {
+                            audioTrackStatus
                         }
                     }
 
