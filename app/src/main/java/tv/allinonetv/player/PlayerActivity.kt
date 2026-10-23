@@ -103,7 +103,10 @@ class PlayerActivity : Activity() {
                     }
 
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        if (isPlaying) statusView?.text = "Playing — checking audio track…"
+                        // Keep the audio-track diagnostic visible instead of replacing it.
+                        if (!isPlaying && exo.playbackState == Player.STATE_BUFFERING) {
+                            statusView?.text = "Connecting / buffering…"
+                        }
                     }
 
                     override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
