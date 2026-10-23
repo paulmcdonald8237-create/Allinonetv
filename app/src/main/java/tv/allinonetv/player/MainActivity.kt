@@ -170,6 +170,10 @@ class MainActivity : Activity() {
             )
         }
 
+        button(root, "Settings") {
+            showSettings()
+        }
+
         button(root, "Manage Providers") {
             showProviders()
         }
@@ -179,6 +183,77 @@ class MainActivity : Activity() {
         }
 
         setScreen(root)
+    }
+
+    private fun showSettings() {
+        val root = makeRoot()
+        title(root, "Settings")
+        label(root, "Manage your Allinonetv app")
+
+        val signedIn = !prefs.getString("customer_token", null).isNullOrBlank()
+        label(root, if (signedIn) "Account status: Signed in" else "Account status: Not signed in")
+
+        button(root, "Customer Account / Log In") {
+            showLogin()
+        }
+
+        button(root, "Sign Out") {
+            prefs.edit()
+                .remove("customer_token")
+                .remove("customer_email")
+                .remove("customer_name")
+                .apply()
+            showMessage("Signed Out", "Your saved Allinonetv session has been cleared.")
+        }
+
+        button(root, "Manage Providers") {
+            showProviders()
+        }
+
+        button(root, "Check Master Panel Connection") {
+            checkMasterPanelConnection()
+        }
+
+        label(root, "App version 1.0")
+        label(root, "Provider credentials should only be entered for services you are authorised to use.")
+
+        button(root, "Back to Home") {
+            showHome()
+        }
+
+        setScreen(root)
+    }
+
+    private fun checkMasterPanelConnection() {
+        thread {
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (URL(customerLoginUrl).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                    setRequestProperty("Accept", "application/json")
+                }
+                connection.outputStream.use { it.write("{}".toByteArray(Charsets.UTF_8)) }
+                val status = connection.responseCode
+                val reachable = status in 200..499
+                runOnUiThread {
+                    showMessage(
+                        if (reachable) "Master Panel Reachable" else "Connection Problem",
+                        if (reachable) "The login service responded (HTTP $status). This checks connectivity only; it does not confirm that your account can sign in."
+                        else "The Master Panel returned HTTP $status. Please check the deployment."
+                    )
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    showMessage("Connection Problem", "Could not reach the Master Panel. Check the deployment and internet connection.")
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }
     }
 
     private fun showProviders() {
