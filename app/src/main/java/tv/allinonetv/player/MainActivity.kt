@@ -477,14 +477,14 @@ class MainActivity : Activity() {
                     val details = buildString {
                         append(name)
                         if (category.isNotBlank()) {
-                            append("\\nCategory: ")
+                            append("\nCategory: ")
                             append(category)
                         }
                         if (id.isNotBlank()) {
-                            append("\\nCatalogue ID: ")
+                            append("\nCatalogue ID: ")
                             append(id)
                         }
-                        append("\\n\\nPlayback is the next integration step.")
+                        append("\n\nPlayback is the next integration step.")
                     }
                     showMessage("Item Details", details)
                 }
