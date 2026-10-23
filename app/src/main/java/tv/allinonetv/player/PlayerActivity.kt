@@ -103,7 +103,19 @@ class PlayerActivity : Activity() {
                     }
 
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        if (isPlaying) statusView?.text = "Playing"
+                        if (isPlaying) statusView?.text = "Playing — checking audio track…"
+                    }
+
+                    override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                        val audioGroups = tracks.groups.filter {
+                            it.type == C.TRACK_TYPE_AUDIO
+                        }
+                        statusView?.text = when {
+                            audioGroups.isEmpty() -> "No audio track detected"
+                            audioGroups.any { it.isSupported } ->
+                                "Audio track detected — supported by player"
+                            else -> "Audio track detected, but format is unsupported"
+                        }
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
