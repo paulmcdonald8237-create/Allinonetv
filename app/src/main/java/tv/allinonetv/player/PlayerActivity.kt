@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -73,6 +75,11 @@ class PlayerActivity : Activity() {
             .setReadTimeoutMs(30000)
             .setAllowCrossProtocolRedirects(true)
 
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build()
+
         player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
@@ -81,6 +88,9 @@ class PlayerActivity : Activity() {
             .build()
             .also { exo ->
                 view.player = exo
+                exo.setAudioAttributes(audioAttributes, true)
+                exo.setHandleAudioBecomingNoisy(true)
+                exo.volume = 1.0f
                 exo.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         statusView?.text = when (playbackState) {
