@@ -142,28 +142,28 @@ class MainActivity : Activity() {
     private fun showHome() {
         val root = makeRoot()
         title(root, "Allinonetv")
-        label(root, "Your TV, all in one place")
+        label(root, "SPORTS • LIVE TV • MOVIES • SERIES")
 
-        button(root, "Live TV") {
+        button(root, "⚽ SPORTS & LIVE TV") {
             loadCatalogue("live", "Live TV")
         }
 
-        button(root, "Movies") {
+        button(root, "🎬 Movies") {
             loadCatalogue("movies", "Movies")
         }
 
-        button(root, "Series") {
+        button(root, "📺 Series") {
             loadCatalogue("series", "Series")
         }
 
-        button(root, "TV Guide (EPG)") {
+        button(root, "🗓 TV Guide (EPG)") {
             showMessage(
                 "TV Guide",
                 "Programme listings need an EPG connection."
             )
         }
 
-        button(root, "Favourites") {
+        button(root, "★ Favourites") {
             showMessage(
                 "Favourites",
                 "Saved channels will appear here when implemented."
@@ -252,27 +252,27 @@ class MainActivity : Activity() {
 
     private fun showLogin() {
         val root = makeRoot()
-        title(root, "Allinonetv Login")
-        label(root, "Sign in with your customer account")
+        title(root, "Allinonetv Sports Login")
+        label(root, "Sign in with your Xtream Codes account")
 
-        val email = input("Email address", email = true)
-        val password = input("Password", password = true)
+        val username = input("Xtream username")
+        val password = input("Xtream password", password = true)
 
-        root.addView(email)
+        root.addView(username)
         root.addView(password)
 
         button(root, "Log In") {
-            val emailText = email.text.toString().trim()
+            val usernameText = username.text.toString().trim()
             val passwordText = password.text.toString()
 
             when {
-                emailText.isBlank() || passwordText.isBlank() ->
+                usernameText.isBlank() || passwordText.isBlank() ->
                     showMessage(
                         "Missing Details",
-                        "Enter your email address and password."
+                        "Enter your Xtream username and password."
                     )
 
-                else -> customerLogin(emailText, passwordText)
+                else -> customerLogin(usernameText, passwordText)
             }
         }
 
@@ -290,7 +290,7 @@ class MainActivity : Activity() {
         setScreen(root)
     }
 
-    private fun customerLogin(email: String, password: String) {
+    private fun customerLogin(username: String, password: String) {
         thread {
             var connection: HttpURLConnection? = null
 
@@ -312,7 +312,7 @@ class MainActivity : Activity() {
                 }
 
                 val payload = JSONObject().apply {
-                    put("email", email)
+                    put("username", username)
                     put("password", password)
                 }.toString()
 
@@ -341,7 +341,7 @@ class MainActivity : Activity() {
                 ) {
                     val token = response!!.getString("token")
                     val customerEmail =
-                        response.optString("email", email)
+                        response.optString("username", username)
                     val displayName =
                         response.optString("displayName", "")
 
