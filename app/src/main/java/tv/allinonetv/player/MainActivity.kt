@@ -145,24 +145,15 @@ class MainActivity : Activity() {
         label(root, "Your TV, all in one place")
 
         button(root, "Live TV") {
-            showMessage(
-                "Live TV",
-                "Streaming playback still needs to be connected."
-            )
+            loadCatalogue("live", "Live TV")
         }
 
         button(root, "Movies") {
-            showMessage(
-                "Movies",
-                "Movie catalogue integration is not yet complete."
-            )
+            loadCatalogue("movies", "Movies")
         }
 
         button(root, "Series") {
-            showMessage(
-                "Series",
-                "Series catalogue integration is not yet complete."
-            )
+            loadCatalogue("series", "Series")
         }
 
         button(root, "TV Guide (EPG)") {
@@ -394,6 +385,121 @@ class MainActivity : Activity() {
                 connection?.disconnect()
             }
         }
+    }
+
+    private fun loadCatalogue(type: String, screenTitle: String) {
+        val token = prefs.getString("customer_token", null)
+
+        if (token.isNullOrBlank()) {
+            showMessage(
+                "Customer Login Required",
+                "Please sign in with your Allinonetv customer account before loading $screenTitle."
+            )
+            return
+        }
+
+        thread {
+            var connection: HttpURLConnection? = null
+
+            try {
+                val endpoint = "$customerCatalogueUrl?type=$type"
+                connection = (URL(endpoint).openConnection()
+                    as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 15000
+                    readTimeout = 20000
+                    setRequestProperty("Authorization", "Bearer $token")
+                    setRequestProperty("Accept", "application/json")
+                }
+
+                val status = connection.responseCode
+                val responseText = (
+                    if (status in 200..299) {
+                        connection.inputStream
+                    } else {
+                        connection.errorStream
+                    }
+                )?.bufferedReader(Charsets.UTF_8)?.use {
+                    it.readText()
+                }.orEmpty()
+
+                val response = runCatching {
+                    JSONObject(responseText)
+                }.getOrNull()
+
+                if (status in 200..299 && response != null) {
+                    val items = response.optJSONArray("items") ?: JSONArray()
+                    runOnUiThread {
+                        showCatalogue(screenTitle, items)
+                    }
+                } else {
+                    val error = response?.optString("error")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "Could not load the catalogue. Please try again."
+
+                    runOnUiThread {
+                        showMessage(
+                            if (status == 401) "Please Sign In Again" else "Catalogue Error",
+                            error
+                        )
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    showMessage(
+                        "Connection Error",
+                        "Could not reach the Allinonetv catalogue service. Check your connection and try again."
+                    )
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }
+    }
+
+    private fun showCatalogue(screenTitle: String, items: JSONArray) {
+        val root = makeRoot()
+        title(root, screenTitle)
+
+        if (items.length() == 0) {
+            label(root, "No items were returned for this catalogue.")
+        } else {
+            label(root, "${items.length()} items loaded. Select an item for details.")
+
+            val visibleCount = minOf(items.length(), 100)
+            for (i in 0 until visibleCount) {
+                val item = items.optJSONObject(i) ?: continue
+                val name = item.optString("name", "Untitled")
+                val category = item.optString("categoryName", "")
+                val id = item.optString("id", "")
+
+                button(root, name) {
+                    val details = buildString {
+                        append(name)
+                        if (category.isNotBlank()) {
+                            append("\\nCategory: ")
+                            append(category)
+                        }
+                        if (id.isNotBlank()) {
+                            append("\\nCatalogue ID: ")
+                            append(id)
+                        }
+                        append("\\n\\nPlayback is the next integration step.")
+                    }
+                    showMessage("Item Details", details)
+                }
+            }
+
+            if (items.length() > visibleCount) {
+                label(root, "Showing the first $visibleCount items. More catalogue browsing can be added next.")
+            }
+        }
+
+        button(root, "Back to Home") {
+            showHome()
+        }
+
+        setScreen(root)
     }
 
     private fun showMessage(
