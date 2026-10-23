@@ -457,6 +457,57 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun typeForTitle(title: String): String = when (title) {
+        "Live TV" -> "live"
+        "Movies" -> "movies"
+        else -> "series"
+    }
+
+    private fun requestPlayback(type: String, id: String, name: String) {
+        val token = prefs.getString("customer_token", null)
+        if (token.isNullOrBlank()) {
+            showMessage("Customer Login Required", "Please sign in again before playback.")
+            return
+        }
+        thread {
+            var connection: HttpURLConnection? = null
+            try {
+                val endpoint = Uri.parse(customerCatalogueUrl).buildUpon()
+                    .appendQueryParameter("type", type)
+                    .appendQueryParameter("playbackId", id)
+                    .build().toString()
+                connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 15000
+                    readTimeout = 20000
+                    setRequestProperty("Authorization", "Bearer $token")
+                    setRequestProperty("Accept", "application/json")
+                }
+                val status = connection.responseCode
+                val body = (if (status in 200..299) connection.inputStream else connection.errorStream)
+                    ?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+                val response = runCatching { JSONObject(body) }.getOrNull()
+                val streamUrl = response?.optString("playbackUrl").orEmpty()
+                if (status in 200..299 && streamUrl.startsWith("https://")) {
+                    runOnUiThread {
+                        startActivity(android.content.Intent(this, PlayerActivity::class.java).apply {
+                            putExtra("stream_url", streamUrl)
+                            putExtra("stream_title", name)
+                        })
+                    }
+                } else {
+                    val message = response?.optString("error")?.takeIf { it.isNotBlank() }
+                        ?: "Could not prepare this stream. Please try another item."
+                    runOnUiThread { showMessage("Playback Error", message) }
+                }
+            } catch (_: Exception) {
+                runOnUiThread { showMessage("Playback Error", "Could not connect to the playback service.") }
+            } finally {
+                connection?.disconnect()
+            }
+        }
+    }
+
     private fun showCatalogue(screenTitle: String, items: JSONArray) {
         val root = makeRoot()
         title(root, screenTitle)
@@ -474,6 +525,12 @@ class MainActivity : Activity() {
                 val id = item.optString("id", "")
 
                 button(root, name) {
+                    if (screenTitle == "Series") {
+                        showMessage("Series Playback", "Series episode playback is the next step. Please test a live channel or movie first.")
+                        return@button
+                    }
+                    requestPlayback(typeForTitle(screenTitle), id, name)
+                    /*
                     val details = buildString {
                         append(name)
                         if (category.isNotBlank()) {
@@ -487,6 +544,7 @@ class MainActivity : Activity() {
                         append("\n\nPlayback is the next integration step.")
                     }
                     showMessage("Item Details", details)
+                    */
                 }
             }
 
