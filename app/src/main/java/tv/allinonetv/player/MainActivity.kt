@@ -35,10 +35,10 @@ class MainActivity : Activity() {
     private var selectedUrl = ""
 
     private val customerLoginUrl =
-        "https://allinonetv-master-panel.vercel.app/api/customer-login"
+        "https://allinonetv-master-panel-git-xtre-67a7c5-paulmcdonald8237-create.vercel.app/api/customer-login"
 
     private val customerCatalogueUrl =
-        "https://allinonetv-master-panel.vercel.app/api/customer-catalogue"
+        "https://allinonetv-master-panel-git-xtre-67a7c5-paulmcdonald8237-create.vercel.app/api/customer-catalogue"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -253,26 +253,26 @@ class MainActivity : Activity() {
     private fun showLogin() {
         val root = makeRoot()
         title(root, "Allinonetv Login")
-        label(root, "Sign in with your customer account")
+        label(root, "Sign in with your Xtream service credentials")
 
-        val email = input("Email address", email = true)
-        val password = input("Password", password = true)
+        val username = input("Xtream username")
+        val password = input("Xtream password", password = true)
 
-        root.addView(email)
+        root.addView(username)
         root.addView(password)
 
         button(root, "Log In") {
-            val emailText = email.text.toString().trim()
+            val usernameText = username.text.toString().trim()
             val passwordText = password.text.toString()
 
             when {
-                emailText.isBlank() || passwordText.isBlank() ->
+                usernameText.isBlank() || passwordText.isBlank() ->
                     showMessage(
                         "Missing Details",
-                        "Enter your email address and password."
+                        "Enter your Xtream username and password."
                     )
 
-                else -> customerLogin(emailText, passwordText)
+                else -> customerLogin(usernameText, passwordText)
             }
         }
 
@@ -290,7 +290,7 @@ class MainActivity : Activity() {
         setScreen(root)
     }
 
-    private fun customerLogin(email: String, password: String) {
+    private fun customerLogin(username: String, password: String) {
         thread {
             var connection: HttpURLConnection? = null
 
@@ -312,7 +312,7 @@ class MainActivity : Activity() {
                 }
 
                 val payload = JSONObject().apply {
-                    put("email", email)
+                    put("username", username)
                     put("password", password)
                 }.toString()
 
@@ -341,7 +341,7 @@ class MainActivity : Activity() {
                 ) {
                     val token = response!!.getString("token")
                     val customerEmail =
-                        response.optString("email", email)
+                        response.optJSONObject("customer")?.optString("username", username) ?: username
                     val displayName =
                         response.optString("displayName", "")
 
@@ -363,7 +363,7 @@ class MainActivity : Activity() {
                         ?.takeIf { it.isNotBlank() }
                         ?: when (status) {
                             401, 403 ->
-                                "The login details were not accepted, or your account is not authorised."
+                                "The Xtream login details were not accepted, or the service may be inactive or expired."
                             in 500..599 ->
                                 "The Master Panel encountered a server error. Please try again later."
                             else ->
